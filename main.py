@@ -39,14 +39,14 @@ if constraints[-1] == []:
 def printTable(obj, con):
     count = 0
     for element in obj:
-        print(" " + str(element).rjust(7 if count != 1 else 15), end = '')
+        print(" " + str(round(element, 2)).rjust(7 if count != 1 else 15), end = '')
         count += 1
     print("\n")
 
     count = 0
     for row in con:
         for element in row:
-            print(" " + str(element).rjust(7 if count != 1 else 15), end = '')
+            print(" " + str(round(element, 2)).rjust(7 if count != 1 else 15), end = '')
             count += 1
         print()
         count = 0
@@ -57,10 +57,11 @@ def printTable(obj, con):
 def largestCoefficient(obj, con):
     maxEnter = 0
     entering = None
-    for elem in range(len(obj)):
+    for elem in range(1, len(obj)):
         if obj[elem] > maxEnter:
             maxEnter,entering = obj[elem],elem
-
+    if entering == None:
+        return None,None
     maxRatio = None
     leaving = None
     for elem in range(len(con)):
@@ -77,9 +78,9 @@ def pivot(entering, leaving, obj, con, finalVals):
     for elem in range(len(con[leaving])):
         con[leaving][elem] /= -divisor
 
-    print("\n\n")
-    print(con[leaving])
-    print("\n\n")
+    # print("\n\n")
+    # print(con[leaving])
+    # print("\n\n")
 
     for i in range(len(con)):
         if i == leaving:
@@ -97,10 +98,21 @@ def pivot(entering, leaving, obj, con, finalVals):
 
 
     return 0
-printTable(objective,constraints)
-entering,leaving = largestCoefficient(objective,constraints)
-print("entering is " + str(entering))
-print("leaving is " + str(leaving))
 
-pivot(entering, leaving, objective,constraints, finalVals)
-printTable(objective,constraints)
+
+while True:
+    entering,leaving = largestCoefficient(objective,constraints)
+    if entering == None:
+        break
+    
+    #print("entering is " + str(entering))
+    #print("leaving is " + str(leaving))
+    pivot(entering, leaving, objective,constraints, finalVals)
+    #printTable(objective,constraints)
+    #print("\n\n")
+
+print(finalVals)
+print("Max value is " + str(objective[0]) + " with x values of")
+for i in range(1, len(finalVals)):
+    print("x" + str(i) + " with a value of " +str(constraints[finalVals[i]][0]))
+
