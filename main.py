@@ -31,7 +31,8 @@ while True:
     count += 1
 fo.close()
 
-finalVals = [None for i in range(len(objective))]
+finalXVals = [None for i in range(len(objective))]  #represents the postion (value) of each xValue (index) within the constraint array. None means that it is nonBasic
+nonBasic = [i for i in range(len(objective))]   #represents where each xValue (value) is in the basis (index) 
 
 if constraints[-1] == []:
     constraints.pop()
@@ -73,39 +74,65 @@ def largestCoefficient(obj, con):
             minRatio,leaving = -con[elem][0]/con[elem][entering],elem
     return entering,leaving
 
-def performPivot(entering, leaving, obj, con, finalVals):
+def performPivot(entering, leaving, obj, con, finalXVals):
     divisor = con[leaving][entering]
     con[leaving][entering] = -1
     for elem in range(len(con[leaving])):
         con[leaving][elem] /= -divisor
 
-    #print("leaving equation is")
-    #print(con[leaving])
-    #print(obj[entering])
-    #print("\n")
+    print("leaving equation is")
+    print(con[leaving])
+    print("with divisor " + str(divisor))
+    print("\n")
 
     for i in range(len(con)):
         if i == leaving:
             continue
         multiFactor = con[i][entering]
+        #print("multiFactor for " + str(i) + " is " + str(multiFactor))
         for j in range(len(con[i])):
+            temp = con[leaving][j]*multiFactor + (con[i][j] if j != entering else 0)
+            #print("element " + str(j) + " is from " + str(temp) + " = " + str(con[leaving][j]) + "*" + str(multiFactor) + " + " + str(con[i][j] if j != entering else 0) )
             con[i][j] = con[leaving][j]*multiFactor + (con[i][j] if j != entering else 0)
 
     multiFactor = obj[entering]
+    #print("multiFactor is " + str(multiFactor))
     for j in range(len(obj)):
+        temp = con[leaving][j]*multiFactor + (obj[j] if j != entering else 0)
+        #print("element " + str(j) + " is from " + str(temp) + " = " + str(con[leaving][j]) + "*" + str(multiFactor) + " + " + str(obj[j] if j != entering else 0) )
         obj[j] = con[leaving][j]*multiFactor + (obj[j] if j != entering else 0)
+    
+    print("finalXVals before is " + str(finalXVals))
+    print("nonBasic before is " + str(nonBasic))
+    print()
+
+    hold = finalXVals[entering]                             #setting hold to waht 
+    if nonBasic[entering] != None:                          #if an x value is non basic
+        for i in range(1, len(finalXVals)):
+            if finalXVals[i] == leaving:
+                print("in for loop setting hold to " + str(i))
+                print("setting finalXVals[" + str(i) + "] to None")
+                print()
+                hold = i
+                finalXVals[i] = None
+                break
         
+        print("setting finalXvals[" + str(entering) + "] to nonBasic[" + str(leaving) + "]")
+        print("setting nonBasic[" + str(entering) + "] to hold which is " + str(hold) )
 
-    finalVals[entering] = leaving
+        finalXVals[entering] = leaving            #we put the leaving xValue from the basis into the appropriate constraint row
+        nonBasic[entering] = hold                 #we put the xValue thats in the leaving position back in the nonBasic 
 
-        
-
+    print()
+    print("finalXVals is " + str(finalXVals))
+    print("nonBasic is " + str(nonBasic))    
+    print()
 
     return 0
 
 
 
-def pivot(obj, con, finalVals):
+def pivot(obj, con, finalXVals):
     iteration = 0
     while True:
         allPositive = True
@@ -135,9 +162,10 @@ def pivot(obj, con, finalVals):
         if entering == None:
             break
         
+        print("------------------------------------")
         print("entering is " + str(entering))
         print("leaving is " + str(leaving))
-        performPivot(entering, leaving, obj, con, finalVals)
+        performPivot(entering, leaving, obj, con, finalXVals)
         printTable(obj,con)
         print("\n\n")
         iteration +=1
@@ -152,14 +180,14 @@ printTable(objective,constraints)
 #             print("checking " + str(i) + "," + str(j) + ": " + str(constraints[i][j]))
 
 print("\n\n\n")
-output = pivot(objective,constraints, finalVals)
+output = pivot(objective,constraints, finalXVals)
 
 if output == "unbounded":
     print(output)
 else:
-    #print(finalVals)
+    #print(finalXVals)
     print(output)
     print("Max value is " + str(objective[0]) + " with x values of")
-    for i in range(1, len(finalVals)):
-        print("x" + str(i) + " with a value of " + (str(constraints[finalVals[i]][0]) if finalVals[i] != None else "0") )
+    for i in range(1, len(finalXVals)):
+        print("x" + str(i) + " with a value of " + (str(constraints[finalXVals[i]][0]) if finalXVals[i] != None else "0") )
 
