@@ -55,42 +55,46 @@ def printTable(obj, con):
 
 
 def largestCoefficient(obj, con):
-    maxEnter = 0
-    entering = None
+    maxEnter,entering = 0,None
+    
     for elem in range(1, len(obj)):
         if obj[elem] > maxEnter:
             maxEnter,entering = obj[elem],elem
+
     if entering == None:
         return None,None
-    maxRatio = None
-    leaving = None
+
+    minRatio,leaving = None,None
+
     for elem in range(len(con)):
-        #print("elem is " + str(elem))
-        if con[elem][entering] == 0:
+        if con[elem][entering] == 0 or con[elem][entering] > 0:
             continue
-        if maxRatio == None or -con[elem][0]/con[elem][entering] < maxRatio:
-            maxRatio,leaving = -con[elem][0]/con[elem][entering],elem
+        if minRatio == None or -con[elem][0]/con[elem][entering] < minRatio:
+            minRatio,leaving = -con[elem][0]/con[elem][entering],elem
     return entering,leaving
 
-def pivot(entering, leaving, obj, con, finalVals):
+def performPivot(entering, leaving, obj, con, finalVals):
     divisor = con[leaving][entering]
     con[leaving][entering] = -1
     for elem in range(len(con[leaving])):
         con[leaving][elem] /= -divisor
 
-    # print("\n\n")
-    # print(con[leaving])
-    # print("\n\n")
+    #print("leaving equation is")
+    #print(con[leaving])
+    #print(obj[entering])
+    #print("\n")
 
     for i in range(len(con)):
         if i == leaving:
             continue
+        multiFactor = con[i][entering]
         for j in range(len(con[i])):
-            con[i][j] = con[leaving][j]*con[i][entering] + (con[i][j] if j != entering else 0)
+            con[i][j] = con[leaving][j]*multiFactor + (con[i][j] if j != entering else 0)
 
-    
+    multiFactor = obj[entering]
     for j in range(len(obj)):
-        obj[j] = con[leaving][j]*obj[entering] + (obj[j] if j != entering else 0)
+        obj[j] = con[leaving][j]*multiFactor + (obj[j] if j != entering else 0)
+        
 
     finalVals[entering] = leaving
 
@@ -100,19 +104,62 @@ def pivot(entering, leaving, obj, con, finalVals):
     return 0
 
 
-while True:
-    entering,leaving = largestCoefficient(objective,constraints)
-    if entering == None:
-        break
-    
-    #print("entering is " + str(entering))
-    #print("leaving is " + str(leaving))
-    pivot(entering, leaving, objective,constraints, finalVals)
-    #printTable(objective,constraints)
-    #print("\n\n")
 
-print(finalVals)
-print("Max value is " + str(objective[0]) + " with x values of")
-for i in range(1, len(finalVals)):
-    print("x" + str(i) + " with a value of " +str(constraints[finalVals[i]][0]))
+def pivot(obj, con, finalVals):
+    iteration = 0
+    while True:
+        allPositive = True
+        optimal = True
+        for j in range(1, len(obj)):
+            allPositive = True
+            if obj[j] < 0:
+                continue
+            else:
+                for i in range(len(con)):
+                    #print("checking " + str(i) + "," + str(j) + ": " + str(con[i][j]) + " which is " + str(con[i][j] < 0)  + " meaning allPositive is " + str(con[i][j] >= 0))
+                    if con[i][j] < 0:
+                        #print("made it on " + str(i) + "," + str(j))
+                        allPositive = False
+            if allPositive == True:
+                return "unbounded"
+        
+        # if optimal == True:
+        #     # print(iteration)
+        #     # printTable(obj,con)
+        #     # print("\n\n")
+        #     return "optimal"
+        # elif allPositive == True:
+        #     return "unbounded"
+
+        entering,leaving = largestCoefficient(obj,con)
+        if entering == None:
+            break
+        
+        print("entering is " + str(entering))
+        print("leaving is " + str(leaving))
+        performPivot(entering, leaving, obj, con, finalVals)
+        printTable(obj,con)
+        print("\n\n")
+        iteration +=1
+    return "optimal"
+
+
+printTable(objective,constraints)
+# print("doing checks")
+# for j in range(1, len(objective)):
+#     if objective[j] > 0:
+#         for i in range(len(constraints)):
+#             print("checking " + str(i) + "," + str(j) + ": " + str(constraints[i][j]))
+
+print("\n\n\n")
+output = pivot(objective,constraints, finalVals)
+
+if output == "unbounded":
+    print(output)
+else:
+    #print(finalVals)
+    print(output)
+    print("Max value is " + str(objective[0]) + " with x values of")
+    for i in range(1, len(finalVals)):
+        print("x" + str(i) + " with a value of " + (str(constraints[finalVals[i]][0]) if finalVals[i] != None else "0") )
 
