@@ -1,4 +1,7 @@
 import sys
+import numpy as np
+import copy
+
 inFile = sys.argv[1]
 
 fo = open(inFile)
@@ -6,7 +9,7 @@ fo = open(inFile)
 objective = []
 matrix = []
 
-
+dual = None
 
 count = 0
 
@@ -32,7 +35,7 @@ while True:
 fo.close()
 
 finalXVals = [None for i in range(len(objective))]  #represents the postion (value) of each xValue (index) within the constraint array. None means that it is nonBasic
-nonBasic = [i for i in range(len(objective))]   #represents where each xValue (value) is in the basis (index) 
+
 
 matrix.insert(0,objective)
 
@@ -73,7 +76,12 @@ def largestCoefficient(mat):
             minRatio,leaving = -mat[elem][0]/mat[elem][entering],elem
     return entering,leaving
 
-def performPivot(entering, leaving, mat, finalXVals):
+def performPivot(entering, leaving, mat, XVals, nonBasic):
+    print("------------------------------------")
+    print("entering is " + str(entering))
+    print("leaving is " + str(leaving))
+
+     
     divisor = mat[leaving][entering]
     mat[leaving][entering] = -1
     for elem in range(len(mat[leaving])):
@@ -95,82 +103,168 @@ def performPivot(entering, leaving, mat, finalXVals):
             mat[i][j] = mat[leaving][j]*multiFactor + (mat[i][j] if j != entering else 0)
 
     
-    print("finalXVals before is " + str(finalXVals))
+    print("XVals before is " + str(XVals))
     print("nonBasic before is " + str(nonBasic))
     print()
 
-    hold = finalXVals[entering]                             #setting hold to waht 
+    hold = XVals[entering]                             #setting hold to waht 
     if nonBasic[entering] != None:                          #if an x value is non basic
-        for i in range(1, len(finalXVals)):
-            if finalXVals[i] == leaving:
+        for i in range(1, len(XVals)):
+            if XVals[i] == leaving:
                 print("in for loop setting hold to " + str(i))
-                print("setting finalXVals[" + str(i) + "] to None")
+                print("setting XVals[" + str(i) + "] to None")
                 print()
                 hold = i
-                finalXVals[i] = None
+                XVals[i] = None
                 break
         
-        print("setting finalXvals[" + str(entering) + "] to nonBasic[" + str(leaving) + "]")
+        print("setting XVals[" + str(entering) + "] to nonBasic[" + str(leaving) + "]")
         print("setting nonBasic[" + str(entering) + "] to hold which is " + str(hold) )
 
-        finalXVals[entering] = leaving            #we put the leaving xValue from the basis into the appropriate constraint row
+        XVals[entering] = leaving            #we put the leaving xValue from the basis into the appropriate constraint row
         nonBasic[entering] = hold                 #we put the xValue thats in the leaving position back in the nonBasic 
 
     print()
-    print("finalXVals is " + str(finalXVals))
+    print("XVals is " + str(XVals))
     print("nonBasic is " + str(nonBasic))    
     print()
+    printTable(mat)
 
     return 0
 
-
-
-def pivot(mat, finalXVals):
-    iteration = 0
-    while True:
+def checkBounds(mat):
+    allPositive = True
+    for j in range(1, len(mat[0])):
         allPositive = True
-        optimal = True
-        for j in range(1, len(mat[0])):
-            allPositive = True
-            if mat[0][j] < 0:
-                continue
-            else:
-                for i in range(len(mat)):
-                    #print("checking " + str(i) + "," + str(j) + ": " + str(mat[i][j]) + " which is " + str(mat[i][j] < 0)  + " meaning allPositive is " + str(mat[i][j] >= 0))
-                    if mat[i][j] < 0:
-                        #print("made it on " + str(i) + "," + str(j))
-                        allPositive = False
-            if allPositive == True:
-                return "unbounded"
-        
-        # if optimal == True:
-        #     # print(iteration)
-        #     # printTable(mat)
-        #     # print("\n\n")
-        #     return "optimal"
-        # elif allPositive == True:
-        #     return "unbounded"
+        if mat[0][j] < 0:
+            continue
+        else:
+            for i in range(len(mat)):
+                #print("checking " + str(i) + "," + str(j) + ": " + str(mat[i][j]) + " which is " + str(mat[i][j] < 0)  + " meaning allPositive is " + str(mat[i][j] >= 0))
+                if mat[i][j] < 0:
+                    #print("made it on " + str(i) + "," + str(j))
+                    allPositive = False
+        if allPositive == True:
+            return "unbounded"
 
-        entering,leaving = largestCoefficient(mat)
-        if entering == None:
-            break
+def checkFeasibility(mat):
+    for i in range(len(mat)):
+        if mat[i][0] < 0:
+            return "infeasible"
+
+def pivot(mat, finalXVals, nonBasic = None):
+    if nonBasic == None:
+        nonBasic = [i for i in range(len(mat[0]))]   #represents where each xValue (value) is in the basis (index)
+
+    if checkFeasibility(mat) == "infeasible":
+        objective = None
+        print("bad")
+        dual = (np.array(mat).T)*-1
+        if checkBounds(dual) == "unbounded":
+            return "infeasible"
         
-        print("------------------------------------")
-        print("entering is " + str(entering))
-        print("leaving is " + str(leaving))
-        performPivot(entering, leaving, mat, finalXVals)
+        printTable(dual)
+
+        if checkFeasibility(dual) == "infeasible":          #if we're primal and dual infeasible create a modified original LP
+            objective = mat[0]
+            mat[0] = [0 for i in range(len(mat[0]))]
+            dual = (np.array(mat).T)*-1
+
+
+        print("not bad?")
+        if objective != None:
+            print("modified LP")
+            printTable(mat)
+            print("\nmodified Dual LP")
+            printTable(dual)
+
+        finalXValsDual = [None for i in range(len(dual[0]))]  
+        
+        nonBasicDual = [i for i in range(len(dual[0]))]   #represents where each xValue (value) is in the basis (index)   
+
+        while True:
+
+            if checkBounds(dual) == "unbounded":
+                return "infeasible"
+            
+            if checkFeasibility(dual) == "infeasible":
+                return "unbounded"
+            
+            
+            entering,leaving = largestCoefficient(dual)
+            if entering == None:
+                break
+            
+            
+
+            performPivot(entering, leaving, dual, finalXValsDual, nonBasicDual)
+            print("---------------primal---------------")
+            performPivot(leaving, entering, mat, finalXVals, nonBasic)
+            
+            
+
+            #printTable(dual)
+            print("\n\n")
+        
+        print("-------------Loop End-------------")
+        if objective != None:
+            print("objective is " + str(objective))
+            print("finalXVals is " + str(finalXVals))
+            
+
+            mat[0][:] = objective[:]
+
+            for i in range(len(finalXVals)):
+               if finalXVals[i] != None:
+                    for j in range(len(mat[0])):
+                        temp = mat[finalXVals[i]][j]*objective[i] + (mat[0][j])
+                        print("mat[" + str(0) + "][" + str(j) + "] is " + str(temp) + " = " + str(mat[finalXVals[i]][j]) + "*" + str(objective[i]) + " + " + str(mat[0][j] if i != j else 0) )
+                        
+                        mat[0][j] = mat[finalXVals[i]][j]*objective[i] + (mat[0][j] if i != j else 0)
+            printTable(mat)
+            return "feasible found",nonBasic
+
+        print("\n\nLoop End")
+        print("finalXValsDual is " + str(finalXValsDual))
+        printTable(dual)
+        print("\n")
+        print("finalXVals is " + str(finalXVals))
         printTable(mat)
         print("\n\n")
-        iteration +=1
-    return "optimal"
+        return "optimal"
+    else:
+        print("in here")
+        while True:
+
+            if checkBounds(mat) == "unbounded":
+                return "unbounded"
+
+            entering,leaving = largestCoefficient(mat)
+            if entering == None:
+                print("simplex done, resulting table:")
+                printTable(mat)
+                break
+            
+
+            performPivot(entering, leaving, mat, finalXVals, nonBasic)
+
+            #printTable(mat)
+            print("\n\n")
+        return "optimal"
 
 
 printTable(matrix)
 
 print("\n\n\n")
-output = pivot(matrix, finalXVals)
+output,nonBasics = pivot(matrix, finalXVals)
 
-if output == "unbounded":
+if output == "feasible found":
+    print("\n\n\n-----------------Found feasible-----------------")
+    #finalXVals = [None for i in range(len(objective))]
+    output = pivot(matrix, finalXVals,nonBasics)
+    
+
+if output == "unbounded" or output == "infeasible":
     print(output)
 else:
     #print(finalXVals)
@@ -179,3 +273,8 @@ else:
     for i in range(1, len(finalXVals)):
         print("x" + str(i) + " with a value of " + (str(matrix[finalXVals[i]][0]) if finalXVals[i] != None else "0") )
 
+# print("\n\n")
+# printTable(matrix)
+# print("\n\n")
+# dual = np.array(matrix).T
+# printTable(dual)
