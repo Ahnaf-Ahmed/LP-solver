@@ -4,7 +4,7 @@ inFile = sys.argv[1]
 fo = open(inFile)
 
 objective = []
-constraints = []
+matrix = []
 
 
 
@@ -23,7 +23,7 @@ while True:
         coefficients = line.split()
         coefficients = coefficients[-1:] + coefficients[:-1] #rotating elements around for dictionary
         row = [(-float(coefficients[elem]) if (elem != 0 and float(coefficients[elem]) != float(0)) else float(coefficients[elem])) for elem in range(len(coefficients))]
-        constraints.append(row)
+        matrix.append(row)
     
     if not line:
         break
@@ -34,73 +34,66 @@ fo.close()
 finalXVals = [None for i in range(len(objective))]  #represents the postion (value) of each xValue (index) within the constraint array. None means that it is nonBasic
 nonBasic = [i for i in range(len(objective))]   #represents where each xValue (value) is in the basis (index) 
 
-if constraints[-1] == []:
-    constraints.pop()
+matrix.insert(0,objective)
 
-def printTable(obj, con):
-    count = 0
-    for element in obj:
-        print(" " + str(round(element, 2)).rjust(7 if count != 1 else 15), end = '')
-        count += 1
-    print("\n")
+if matrix[-1] == []:
+    matrix.pop()
 
+def printTable(mat):
     count = 0
-    for row in con:
+    obj = True
+    for row in mat:
         for element in row:
             print(" " + str(round(element, 2)).rjust(7 if count != 1 else 15), end = '')
             count += 1
         print()
         count = 0
+        if obj == True:
+            print()
+            obj = False
 
 
 
-
-def largestCoefficient(obj, con):
+def largestCoefficient(mat):
     maxEnter,entering = 0,None
     
-    for elem in range(1, len(obj)):
-        if obj[elem] > maxEnter:
-            maxEnter,entering = obj[elem],elem
+    for elem in range(1, len(mat[0])):
+        if mat[0][elem] > maxEnter:
+            maxEnter,entering = mat[0][elem],elem
 
     if entering == None:
         return None,None
 
     minRatio,leaving = None,None
 
-    for elem in range(len(con)):
-        if con[elem][entering] == 0 or con[elem][entering] > 0:
+    for elem in range(1,len(mat)):
+        if mat[elem][entering] == 0 or mat[elem][entering] > 0:
             continue
-        if minRatio == None or -con[elem][0]/con[elem][entering] < minRatio:
-            minRatio,leaving = -con[elem][0]/con[elem][entering],elem
+        if minRatio == None or -mat[elem][0]/mat[elem][entering] < minRatio:
+            minRatio,leaving = -mat[elem][0]/mat[elem][entering],elem
     return entering,leaving
 
-def performPivot(entering, leaving, obj, con, finalXVals):
-    divisor = con[leaving][entering]
-    con[leaving][entering] = -1
-    for elem in range(len(con[leaving])):
-        con[leaving][elem] /= -divisor
+def performPivot(entering, leaving, mat, finalXVals):
+    divisor = mat[leaving][entering]
+    mat[leaving][entering] = -1
+    for elem in range(len(mat[leaving])):
+        mat[leaving][elem] /= -divisor
 
     print("leaving equation is")
-    print(con[leaving])
+    print(mat[leaving])
     print("with divisor " + str(divisor))
     print("\n")
 
-    for i in range(len(con)):
+    for i in range(len(mat)):
         if i == leaving:
             continue
-        multiFactor = con[i][entering]
+        multiFactor = mat[i][entering]
         #print("multiFactor for " + str(i) + " is " + str(multiFactor))
-        for j in range(len(con[i])):
-            temp = con[leaving][j]*multiFactor + (con[i][j] if j != entering else 0)
-            #print("element " + str(j) + " is from " + str(temp) + " = " + str(con[leaving][j]) + "*" + str(multiFactor) + " + " + str(con[i][j] if j != entering else 0) )
-            con[i][j] = con[leaving][j]*multiFactor + (con[i][j] if j != entering else 0)
+        for j in range(len(mat[i])):
+            temp = mat[leaving][j]*multiFactor + (mat[i][j] if j != entering else 0)
+            #print("element " + str(j) + " is from " + str(temp) + " = " + str(mat[leaving][j]) + "*" + str(multiFactor) + " + " + str(mat[i][j] if j != entering else 0) )
+            mat[i][j] = mat[leaving][j]*multiFactor + (mat[i][j] if j != entering else 0)
 
-    multiFactor = obj[entering]
-    #print("multiFactor is " + str(multiFactor))
-    for j in range(len(obj)):
-        temp = con[leaving][j]*multiFactor + (obj[j] if j != entering else 0)
-        #print("element " + str(j) + " is from " + str(temp) + " = " + str(con[leaving][j]) + "*" + str(multiFactor) + " + " + str(obj[j] if j != entering else 0) )
-        obj[j] = con[leaving][j]*multiFactor + (obj[j] if j != entering else 0)
     
     print("finalXVals before is " + str(finalXVals))
     print("nonBasic before is " + str(nonBasic))
@@ -132,19 +125,19 @@ def performPivot(entering, leaving, obj, con, finalXVals):
 
 
 
-def pivot(obj, con, finalXVals):
+def pivot(mat, finalXVals):
     iteration = 0
     while True:
         allPositive = True
         optimal = True
-        for j in range(1, len(obj)):
+        for j in range(1, len(mat[0])):
             allPositive = True
-            if obj[j] < 0:
+            if mat[0][j] < 0:
                 continue
             else:
-                for i in range(len(con)):
-                    #print("checking " + str(i) + "," + str(j) + ": " + str(con[i][j]) + " which is " + str(con[i][j] < 0)  + " meaning allPositive is " + str(con[i][j] >= 0))
-                    if con[i][j] < 0:
+                for i in range(len(mat)):
+                    #print("checking " + str(i) + "," + str(j) + ": " + str(mat[i][j]) + " which is " + str(mat[i][j] < 0)  + " meaning allPositive is " + str(mat[i][j] >= 0))
+                    if mat[i][j] < 0:
                         #print("made it on " + str(i) + "," + str(j))
                         allPositive = False
             if allPositive == True:
@@ -152,42 +145,37 @@ def pivot(obj, con, finalXVals):
         
         # if optimal == True:
         #     # print(iteration)
-        #     # printTable(obj,con)
+        #     # printTable(mat)
         #     # print("\n\n")
         #     return "optimal"
         # elif allPositive == True:
         #     return "unbounded"
 
-        entering,leaving = largestCoefficient(obj,con)
+        entering,leaving = largestCoefficient(mat)
         if entering == None:
             break
         
         print("------------------------------------")
         print("entering is " + str(entering))
         print("leaving is " + str(leaving))
-        performPivot(entering, leaving, obj, con, finalXVals)
-        printTable(obj,con)
+        performPivot(entering, leaving, mat, finalXVals)
+        printTable(mat)
         print("\n\n")
         iteration +=1
     return "optimal"
 
 
-printTable(objective,constraints)
-# print("doing checks")
-# for j in range(1, len(objective)):
-#     if objective[j] > 0:
-#         for i in range(len(constraints)):
-#             print("checking " + str(i) + "," + str(j) + ": " + str(constraints[i][j]))
+printTable(matrix)
 
 print("\n\n\n")
-output = pivot(objective,constraints, finalXVals)
+output = pivot(matrix, finalXVals)
 
 if output == "unbounded":
     print(output)
 else:
     #print(finalXVals)
     print(output)
-    print("Max value is " + str(objective[0]) + " with x values of")
+    print("Max value is " + str(matrix[0][0]) + " with x values of")
     for i in range(1, len(finalXVals)):
-        print("x" + str(i) + " with a value of " + (str(constraints[finalXVals[i]][0]) if finalXVals[i] != None else "0") )
+        print("x" + str(i) + " with a value of " + (str(matrix[finalXVals[i]][0]) if finalXVals[i] != None else "0") )
 
