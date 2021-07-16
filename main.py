@@ -12,7 +12,7 @@ matrix = []
 dual = None
 
 count = 0
-epsilon = 0.0000000001
+epsilon = 0.0000001
 degenerate = False
 
 for input in sys.stdin:
@@ -211,8 +211,8 @@ def performPivot(entering, leaving, mat, basis, nonBasic):
     return
 
 def checkBounds(mat):
-    print("checking bounds for the following table")
-    printTable(mat)
+    #print("checking bounds for the following table")
+    #printTable(mat)
     allPositive = True
     for j in range(1, len(mat[0])):
         allPositive = True
@@ -231,8 +231,6 @@ def checkBounds(mat):
 def checkFeasibility(mat):
     for i in range(1, len(mat)):
         if mat[i][0] < 0 - epsilon:
-            print("the following table is bad")
-            printTable(mat)
             return "infeasible"
 
 def pivot(mat, basis, nonBasic = None):
@@ -245,9 +243,11 @@ def pivot(mat, basis, nonBasic = None):
         print("bad, original is infeasible")
         dual = (np.array(mat).T)*-1
         if checkBounds(dual) == "unbounded":
+            print("dual is unbounded")
+            printTable(dual)
             return "infeasible", None
         
-        print("dual table")
+        print("\ndual table")
         printTable(dual)
         
         #if we're primal and dual infeasible create a modified original LP
@@ -260,7 +260,7 @@ def pivot(mat, basis, nonBasic = None):
 
         
         if objective != None:
-            print("modified LP")
+            print("\nmodified LP")
             printTable(mat)
             print("\nmodified Dual LP")
             printTable(dual)
@@ -315,11 +315,12 @@ def pivot(mat, basis, nonBasic = None):
             for i in range(len(basis)):
                if basis[i] > 0:
                     print()
+                    print("checking basis[" + str(i) + "] which is " + str(basis[i]))
                     for j in range(len(mat[0])):
-                        temp = mat[i][j]*objective[i] + (mat[0][j])
-                        print("mat[" + str(0) + "][" + str(j) + "] is " + str(temp) + " = " + str(mat[basis[i]][j]) + "*" + str(objective[i]) + " + " + str(mat[0][j]) )
+                        temp = mat[i][j]*objective[basis[i]] + (mat[0][j])
+                        print("mat[" + str(0) + "][" + str(j) + "] is " + str(temp) + " = " + str(mat[i][j]) + "*" + str(objective[basis[i]]) + " + " + str(mat[0][j]) )
                         
-                        mat[0][j] = mat[i][j]*objective[i] + (mat[0][j])
+                        mat[0][j] = mat[i][j]*objective[basis[i]] + (mat[0][j])
             printTable(mat)
             return "feasible found",nonBasic
 
@@ -336,6 +337,7 @@ def pivot(mat, basis, nonBasic = None):
         while True:
 
             if checkBounds(mat) == "unbounded":
+                print()
                 return "unbounded",None
 
             entering,leaving = findPivots(mat, basis, nonBasic)
@@ -378,9 +380,10 @@ else:
     print("final basis is " + str(finalBasis))
     finalXVals = computeFinalVals(matrix,finalBasis)
     print(output)
-    print("Max value is " + str(matrix[0][0]) + " with x values of")
+    print("Max value is " + str(round(matrix[0][0],7)) + " with x values of")
     for i in range(1, len(finalXVals)):
-        print("x" + str(i) + " with a value of " + (str(finalXVals[i])))
+        print("x" + str(i) + " with a value of " + (str( round(finalXVals[i],7) )))
+        #print("x" + str(i) + " with a value of " + str(finalXVals[i])  ) 
 
 # print("\n\n")
 # printTable(matrix)
