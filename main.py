@@ -43,8 +43,8 @@ if matrix[-1] == []:
     matrix.pop()
 
 finalBasis = [-i for i in range(len(matrix))]  #represents which variable is in which constraint row(negative means slack variable)
-print(len(matrix))
-print(finalBasis)
+#print(len(matrix))
+#print(finalBasis)
 
 def printTable(mat):
     count = 0
@@ -121,9 +121,9 @@ def largestCoefficient(mat):
     minRatio,leaving = None,None
 
     for elem in range(1,len(mat)):
-        print("checking if mat[" + str(elem) + "][" + str(entering) + "] which is " + str(mat[elem][entering]) + " is greater than 0 + " + str(epsilon))
+        #print("checking if mat[" + str(elem) + "][" + str(entering) + "] which is " + str(mat[elem][entering]) + " is greater than 0 + " + str(epsilon))
         if mat[elem][entering] == 0 or mat[elem][entering] > -epsilon:
-            print("it was")
+            #print("it was")
             continue
         if minRatio == None or -mat[elem][0]/mat[elem][entering] < minRatio:
             minRatio,leaving = -mat[elem][0]/mat[elem][entering],elem
@@ -131,9 +131,9 @@ def largestCoefficient(mat):
 
 def performPivot(entering, leaving, mat, basis, nonBasic):
     oldObjVal = mat[0][0]
-    print("------------------------------------")
-    print("entering is " + str(entering))
-    print("leaving is " + str(leaving))
+    #print("------------------------------------")
+    #print("entering is " + str(entering))
+    #print("leaving is " + str(leaving))
 
      
     divisor = mat[leaving][entering]
@@ -145,10 +145,10 @@ def performPivot(entering, leaving, mat, basis, nonBasic):
             mat[leaving][elem] = 0
         
 
-    print("leaving equation is")
-    print(mat[leaving])
-    print("with divisor " + str(divisor))
-    print("\n")
+    #print("leaving equation is")
+    #print(mat[leaving])
+    #print("with divisor " + str(divisor))
+    #print("\n")
 
     for i in range(len(mat)):
         if i == leaving:
@@ -163,20 +163,20 @@ def performPivot(entering, leaving, mat, basis, nonBasic):
                 mat[i][j] = 0
 
     
-    print("basis BEFORE is    " + str(basis))
-    print("nonBasic BEFORE is " + str(nonBasic))
-    print()
+    #print("basis BEFORE is    " + str(basis))
+    #print("nonBasic BEFORE is " + str(nonBasic))
+    #print()
 
     hold = nonBasic[entering]
     nonBasic[entering] = basis[leaving]
     basis[leaving] = hold
 
 
-    print()
-    print("basis is    " + str(basis))
-    print("nonBasic is " + str(nonBasic))    
-    print()
-    printTable(mat)
+    # print()
+    # print("basis is    " + str(basis))
+    # print("nonBasic is " + str(nonBasic))    
+    # print()
+    # printTable(mat)
 
     newObjVal = mat[0][0]
 
@@ -201,7 +201,7 @@ def checkBounds(mat):
                     #print("made it on " + str(i) + "," + str(j))
                     allPositive = False
         if allPositive == True:
-            print("failed with column " + str(j))
+            #print("failed with column " + str(j))
             return "unbounded"
 
 def checkFeasibility(mat):
@@ -216,30 +216,30 @@ def pivot(mat, basis, nonBasic = None):
     #original is infeasible so create a dual LP
     if checkFeasibility(mat) == "infeasible":
         objective = None
-        print("bad, original is infeasible")
+        #print("bad, original is infeasible")
         dual = (np.array(mat).T)*-1
         if checkBounds(dual) == "unbounded":
-            print("dual is unbounded")
-            printTable(dual)
+            #print("dual is unbounded")
+            #printTable(dual)
             return "infeasible", None
         
-        print("\ndual table")
-        printTable(dual)
+        #print("\ndual table")
+        #printTable(dual)
         
         #if we're primal and dual infeasible create a modified original LP
         if checkFeasibility(dual) == "infeasible":          
-            print("dual also infeasible, creating modified LPs")
+            #print("dual also infeasible, creating modified LPs")
             objective = mat[0]
             mat[0] = [0 for i in range(len(mat[0]))]
             dual = (np.array(mat).T)*-1
 
 
         
-        if objective != None:
-            print("\nmodified LP")
-            printTable(mat)
-            print("\nmodified Dual LP")
-            printTable(dual)
+        # if objective != None:
+        #     print("\nmodified LP")
+        #     printTable(mat)
+        #     print("\nmodified Dual LP")
+        #     printTable(dual)
 
         basisDual = [-i for i in range(len(dual))]          #represents what value is in each constraint row (negative means slack)
         
@@ -248,11 +248,11 @@ def pivot(mat, basis, nonBasic = None):
         while True:
 
             if checkBounds(dual) == "unbounded":
-                print("dual's unbounded")
+                #print("dual's unbounded")
                 return "infeasible",None
             
             if checkFeasibility(dual) == "infeasible":
-                print("dual's infeasible")
+                #print("dual's infeasible")
                 return "unbounded",None
             
             
@@ -265,20 +265,20 @@ def pivot(mat, basis, nonBasic = None):
 
             #perform pivot on the dual with the refersed pivot on the primal
             performPivot(entering, leaving, dual, basisDual, nonBasicDual)
-            print("---------------primal---------------")
+            #print("---------------primal---------------")
             performPivot(leaving, entering, mat, basis, nonBasic)
             
             
 
             #printTable(dual)
-            print("\n\n")
+            #print("\n\n")
         
-        print("-------------Loop End-------------")
+        #print("-------------Loop End-------------")
         
         #Here we reconstruct the objective values by taking the original objective and reinserting x values
         if objective != None:
-            print("objective is " + str(objective))
-            print("basis is " + str(basis))
+            # print("objective is " + str(objective))
+            # print("basis is " + str(basis))
             
 
             mat[0][:] = objective[:]
@@ -290,45 +290,45 @@ def pivot(mat, basis, nonBasic = None):
 
             for i in range(len(basis)):
                if basis[i] > 0:
-                    print()
-                    print("checking basis[" + str(i) + "] which is " + str(basis[i]))
+                    # print()
+                    # print("checking basis[" + str(i) + "] which is " + str(basis[i]))
                     for j in range(len(mat[0])):
                         temp = mat[i][j]*objective[basis[i]] + (mat[0][j])
-                        print("mat[" + str(0) + "][" + str(j) + "] is " + str(temp) + " = " + str(mat[i][j]) + "*" + str(objective[basis[i]]) + " + " + str(mat[0][j]) )
+                        #print("mat[" + str(0) + "][" + str(j) + "] is " + str(temp) + " = " + str(mat[i][j]) + "*" + str(objective[basis[i]]) + " + " + str(mat[0][j]) )
                         
                         mat[0][j] = mat[i][j]*objective[basis[i]] + (mat[0][j])
                         if abs(mat[0][j]) < epsilon:
                             mat[0][j] = 0
-            printTable(mat)
+            #printTable(mat)
             return "feasible found",nonBasic
 
-        print("\n\nLoop End")
-        print("basisDual is " + str(basisDual))
-        printTable(dual)
-        print("\n")
-        print("basis is " + str(basis))
-        printTable(mat)
-        print("\n\n")
+        # print("\n\nLoop End")
+        # print("basisDual is " + str(basisDual))
+        # printTable(dual)
+        # print("\n")
+        # print("basis is " + str(basis))
+        # printTable(mat)
+        # print("\n\n")
         return "optimal",None
     else:
-        print("in here")
+        #print("in here")
         while True:
 
             if checkBounds(mat) == "unbounded":
-                print()
+                #print()
                 return "unbounded",None
 
             entering,leaving = findPivots(mat, basis, nonBasic)
             if entering == None:
-                print("simplex done, resulting table:")
-                printTable(mat)
+                # print("simplex done, resulting table:")
+                # printTable(mat)
                 break
             
 
             performPivot(entering, leaving, mat, basis, nonBasic)
 
             #printTable(mat)
-            print("\n\n")
+            #print("\n\n")
         return "optimal",None
 
 def computeFinalVals(mat, basis):
@@ -339,23 +339,23 @@ def computeFinalVals(mat, basis):
 
     return xVals
 
-printTable(matrix)
+#printTable(matrix)
 
-print("\n\n\n")
+#print("\n\n\n")
 output,nonBasics = pivot(matrix, finalBasis)
 
 if output == "feasible found":
-    print("\n\n\n-----------------Found feasible-----------------")
+    #print("\n\n\n-----------------Found feasible-----------------")
     output,nonBasics = pivot(matrix, finalBasis,nonBasics)
     
 
 if output == "unbounded" or output == "infeasible":
     print(output)
-    printTable(matrix)
-    print("above was " + str(output))
+    #printTable(matrix)
+    #print("above was " + str(output))
 else:
     
-    print("final basis is " + str(finalBasis))
+    #print("final basis is " + str(finalBasis))
     finalXVals = computeFinalVals(matrix,finalBasis)
     print(output)
     print("Max value is " + str(round(matrix[0][0],7)) + " with x values of")
