@@ -141,6 +141,10 @@ def performPivot(entering, leaving, mat, basis, nonBasic):
     for elem in range(len(mat[leaving])):
         mat[leaving][elem] /= -divisor
 
+        if abs(mat[leaving][elem]) < epsilon:
+            mat[leaving][elem] = 0
+        
+
     print("leaving equation is")
     print(mat[leaving])
     print("with divisor " + str(divisor))
@@ -155,6 +159,8 @@ def performPivot(entering, leaving, mat, basis, nonBasic):
             temp = mat[leaving][j]*multiFactor + (mat[i][j] if j != entering else 0)
             #print("element " + str(j) + " which is originally " + str(mat[i][j]) + " is from " + str(temp) + " = " + str(mat[leaving][j]) + "*" + str(multiFactor) + " + " + str(mat[i][j] if j != entering else 0) )
             mat[i][j] = mat[leaving][j]*multiFactor + (mat[i][j] if j != entering else 0)
+            if abs(mat[i][j]) < epsilon:
+                mat[i][j] = 0
 
     
     print("basis BEFORE is    " + str(basis))
@@ -165,36 +171,6 @@ def performPivot(entering, leaving, mat, basis, nonBasic):
     nonBasic[entering] = basis[leaving]
     basis[leaving] = hold
 
-    # hold = basis[entering]                              #setting hold to what is in the position (usually none?)
-    # temp = None
-    # if nonBasic[entering] != None:                      #if the entering variable is an x value
-    #     for i in range(1, len(basis)):
-    #         if basis[i] == leaving:                     #if the leaving varaible is an x value (x vals holds which constraint for is for xval i so the ith x value is hold in constraintRow basis[i])
-    #             print("in for loop setting hold to " + str(i) + "becasue basis[" + str(i) + "] is equal to leaving which is " + str(leaving))
-    #             print("setting basis[" + str(i) + "] to None")
-    #             print()
-    #             hold = i                                #hold is the position of the leaving variable in basis
-    #             temp = basis[i]
-    #             basis[i] = None
-    #             break
-        
-    #     print("setting basis[" + str(nonBasic[entering]) + "] to nonBasic[" + str(leaving) + "]")
-    #     print("setting nonBasic[" + str(entering) + "] to hold which is " + str(hold) )
-
-    #     if nonBasic[entering] != None and hold != None:
-    #         print("new territory")
-    #         basis[nonBasic[entering]] = temp
-    #     else:    
-    #         basis[entering] = leaving            #we put the leaving xValue from the basis into the appropriate constraint row
-    #     nonBasic[entering] = hold            #we put the xValue thats in the leaving position back in the nonBasic 
-
-    # else:
-    #      for i in range(1, len(basis)):
-    #         if basis[i] == leaving:
-    #             print("setting nonBasic[" + str(entering) + "] to i which is " + str(i) )
-    #             print("setting basis[" + str(i) + "] to None")
-    #             nonBasic[entering] = i
-    #             basis[i] = None
 
     print()
     print("basis is    " + str(basis))
@@ -216,12 +192,12 @@ def checkBounds(mat):
     allPositive = True
     for j in range(1, len(mat[0])):
         allPositive = True
-        if mat[0][j] <= 0 + epsilon:
+        if mat[0][j] < 0 + epsilon:
             continue
         else:
             for i in range(len(mat)):
                 #print("checking " + str(i) + "," + str(j) + ": " + str(mat[i][j]) + " which is " + str(mat[i][j] < 0)  + " meaning allPositive is " + str(mat[i][j] >= 0))
-                if mat[i][j] < 0 + epsilon:
+                if mat[i][j] < 0 - epsilon:
                     #print("made it on " + str(i) + "," + str(j))
                     allPositive = False
         if allPositive == True:
@@ -321,6 +297,8 @@ def pivot(mat, basis, nonBasic = None):
                         print("mat[" + str(0) + "][" + str(j) + "] is " + str(temp) + " = " + str(mat[i][j]) + "*" + str(objective[basis[i]]) + " + " + str(mat[0][j]) )
                         
                         mat[0][j] = mat[i][j]*objective[basis[i]] + (mat[0][j])
+                        if abs(mat[0][j]) < epsilon:
+                            mat[0][j] = 0
             printTable(mat)
             return "feasible found",nonBasic
 
