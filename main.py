@@ -1,18 +1,22 @@
 import sys
-inFile = sys.argv[1]
+import numpy as np
+import copy
 
-fo = open(inFile)
+#inFile = sys.argv[1]
+
+#fo = open(inFile)
 
 objective = []
-constraints = []
+matrix = []
 
-
+dual = None
 
 count = 0
+epsilon = 0.00000001
+degenerate = False
 
-while True:
- 
-    line = fo.readline()
+for input in sys.stdin:
+    line = input.rstrip()
     
     if count == 0:
         coefficients = line.split()
@@ -23,171 +27,255 @@ while True:
         coefficients = line.split()
         coefficients = coefficients[-1:] + coefficients[:-1] #rotating elements around for dictionary
         row = [(-float(coefficients[elem]) if (elem != 0 and float(coefficients[elem]) != float(0)) else float(coefficients[elem])) for elem in range(len(coefficients))]
-        constraints.append(row)
+        matrix.append(row)
     
     if not line:
         break
     
     count += 1
-fo.close()
 
-finalXVals = [None for i in range(len(objective))]  #represents the postion (value) of each xValue (index) within the constraint array. None means that it is nonBasic
-nonBasic = [i for i in range(len(objective))]   #represents where each xValue (value) is in the basis (index) 
 
-if constraints[-1] == []:
-    constraints.pop()
+matrix.insert(0,objective)
 
-def printTable(obj, con):
+
+
+if matrix[-1] == []:
+    matrix.pop()
+
+finalBasis = [-i for i in range(len(matrix))]  #represents which variable is in which constraint row(negative means slack variable)
+#print(len(matrix))
+#print(finalBasis)
+
+def printTable(mat):
     count = 0
-    for element in obj:
-        print(" " + str(round(element, 2)).rjust(7 if count != 1 else 15), end = '')
-        count += 1
-    print("\n")
-
-    count = 0
-    for row in con:
+    obj = True
+    for row in mat:
         for element in row:
             print(" " + str(round(element, 2)).rjust(7 if count != 1 else 15), end = '')
             count += 1
         print()
         count = 0
+        if obj == True:
+            print()
+            obj = False
 
 
 
+def findPivots(mat, basis, nonBasic):
+    
+    if degenerate == False:
+        entering,leaving = largestCoefficient(mat)
+    else:
+        entering,leaving = bland(mat, basis, nonBasic)
 
-def largestCoefficient(obj, con):
+    return entering,leaving
+
+def bland(mat, basis, nonBasic):
+    global degenerate 
+    degenerate = False
+    entering, leaving = None, None
+
+    #finding entering variable
+    smallestPositiveIndex = None
+    smallestNegativeIndex = None
+    for elem in range(1, len(nonBasic)):
+        
+        if mat[0][elem] > epsilon:
+            if nonBasic[elem] > 0:
+                if smallestPositiveIndex == None or nonBasic[elem] < smallestPositiveIndex:
+                    smallestPositiveIndex = nonBasic[elem]
+            
+            if nonBasic[elem] < 0:
+                if smallestNegativeIndex == None or nonBasic[elem] > smallestNegativeIndex: #negative just means slack variables
+                    smallestNegativeIndex = nonBasic[elem]
+    entering = smallestPositiveIndex if smallestPositiveIndex != None else smallestNegativeIndex
+
+    #finding leaving variable
+    smallestPositiveIndex = None
+    smallestNegativeIndex = None
+    for elem in range(1, len(basis)):
+
+        if mat[elem][entering] < -epsilon:
+            if basis[elem] > 0:
+                if smallestPositiveIndex == None or basis[elem] < smallestPositiveIndex:
+                    smallestPositiveIndex = basis[elem]
+            
+            if basis[elem] < 0:
+                if smallestNegativeIndex == None or basis[elem] > smallestNegativeIndex: #negative just means slack variables
+                    smallestNegativeIndex = basis[elem]
+    leaving = smallestPositiveIndex if smallestPositiveIndex != None else smallestNegativeIndex
+    
+    return entering,leaving
+
+
+def largestCoefficient(mat):
     maxEnter,entering = 0,None
     
-    for elem in range(1, len(obj)):
-        if obj[elem] > maxEnter:
-            maxEnter,entering = obj[elem],elem
+    for elem in range(1, len(mat[0])):
+        if mat[0][elem] > maxEnter:
+            maxEnter,entering = mat[0][elem],elem
 
     if entering == None:
         return None,None
 
     minRatio,leaving = None,None
 
-    for elem in range(len(con)):
-        if con[elem][entering] == 0 or con[elem][entering] > 0:
+    for elem in range(1,len(mat)):
+        #print("checking if mat[" + str(elem) + "][" + str(entering) + "] which is " + str(mat[elem][entering]) + " is greater than 0 + " + str(epsilon))
+        if mat[elem][entering] == 0 or mat[elem][entering] > -epsilon:
+            #print("it was")
             continue
-        if minRatio == None or -con[elem][0]/con[elem][entering] < minRatio:
-            minRatio,leaving = -con[elem][0]/con[elem][entering],elem
+        if minRatio == None or -mat[elem][0]/mat[elem][entering] < minRatio:
+            minRatio,leaving = -mat[elem][0]/mat[elem][entering],elem
     return entering,leaving
 
-def performPivot(entering, leaving, obj, con, finalXVals):
-    divisor = con[leaving][entering]
-    con[leaving][entering] = -1
-    for elem in range(len(con[leaving])):
-        con[leaving][elem] /= -divisor
+def performPivot(entering, leaving, mat, basis, nonBasic):
+    oldObjVal = mat[0][0]
 
-    print("leaving equation is")
-    print(con[leaving])
-    print("with divisor " + str(divisor))
-    print("\n")
+     
+    divisor = mat[leaving][entering]
+    mat[leaving][entering] = -1
+    for elem in range(len(mat[leaving])):
+        mat[leaving][elem] /= -divisor
 
-    for i in range(len(con)):
+        # if abs(mat[leaving][elem]) < epsilon:
+        #     mat[leaving][elem] = 0
+
+    for i in range(len(mat)):
         if i == leaving:
             continue
-        multiFactor = con[i][entering]
-        #print("multiFactor for " + str(i) + " is " + str(multiFactor))
-        for j in range(len(con[i])):
-            temp = con[leaving][j]*multiFactor + (con[i][j] if j != entering else 0)
-            #print("element " + str(j) + " is from " + str(temp) + " = " + str(con[leaving][j]) + "*" + str(multiFactor) + " + " + str(con[i][j] if j != entering else 0) )
-            con[i][j] = con[leaving][j]*multiFactor + (con[i][j] if j != entering else 0)
+        multiFactor = mat[i][entering]
+        for j in range(len(mat[i])):
+            mat[i][j] = mat[leaving][j]*multiFactor + (mat[i][j] if j != entering else 0)
+            if abs(mat[i][j]) < epsilon:
+                mat[i][j] = 0
 
-    multiFactor = obj[entering]
-    #print("multiFactor is " + str(multiFactor))
-    for j in range(len(obj)):
-        temp = con[leaving][j]*multiFactor + (obj[j] if j != entering else 0)
-        #print("element " + str(j) + " is from " + str(temp) + " = " + str(con[leaving][j]) + "*" + str(multiFactor) + " + " + str(obj[j] if j != entering else 0) )
-        obj[j] = con[leaving][j]*multiFactor + (obj[j] if j != entering else 0)
-    
-    print("finalXVals before is " + str(finalXVals))
-    print("nonBasic before is " + str(nonBasic))
-    print()
+    hold = nonBasic[entering]
+    nonBasic[entering] = basis[leaving]
+    basis[leaving] = hold
 
-    hold = finalXVals[entering]                             #setting hold to waht 
-    if nonBasic[entering] != None:                          #if an x value is non basic
-        for i in range(1, len(finalXVals)):
-            if finalXVals[i] == leaving:
-                print("in for loop setting hold to " + str(i))
-                print("setting finalXVals[" + str(i) + "] to None")
-                print()
-                hold = i
-                finalXVals[i] = None
-                break
-        
-        print("setting finalXvals[" + str(entering) + "] to nonBasic[" + str(leaving) + "]")
-        print("setting nonBasic[" + str(entering) + "] to hold which is " + str(hold) )
+    newObjVal = mat[0][0]
 
-        finalXVals[entering] = leaving            #we put the leaving xValue from the basis into the appropriate constraint row
-        nonBasic[entering] = hold                 #we put the xValue thats in the leaving position back in the nonBasic 
+    if newObjVal - oldObjVal == 0 + epsilon:
+        global degenerate
+        degenerate = True
 
-    print()
-    print("finalXVals is " + str(finalXVals))
-    print("nonBasic is " + str(nonBasic))    
-    print()
+    return
 
-    return 0
-
-
-
-def pivot(obj, con, finalXVals):
-    iteration = 0
-    while True:
+def checkBounds(mat):
+    allPositive = True
+    for j in range(1, len(mat[0])):
         allPositive = True
-        optimal = True
-        for j in range(1, len(obj)):
-            allPositive = True
-            if obj[j] < 0:
-                continue
-            else:
-                for i in range(len(con)):
-                    #print("checking " + str(i) + "," + str(j) + ": " + str(con[i][j]) + " which is " + str(con[i][j] < 0)  + " meaning allPositive is " + str(con[i][j] >= 0))
-                    if con[i][j] < 0:
-                        #print("made it on " + str(i) + "," + str(j))
-                        allPositive = False
-            if allPositive == True:
-                return "unbounded"
+        if mat[0][j] < 0 + epsilon:
+            continue
+        else:
+            for i in range(len(mat)):
+                if mat[i][j] < 0 - epsilon:
+                    allPositive = False
+        if allPositive == True:
+            return "unbounded"
+
+def checkFeasibility(mat):
+    for i in range(1, len(mat)):
+        if mat[i][0] < 0 - epsilon:
+            return "infeasible"
+
+def pivot(mat, basis, nonBasic = None):
+    if nonBasic == None:
+        nonBasic = [i for i in range(len(mat[0]))]   #represents where each xValue (value) is in the basis (index) (- will mean slack variables)
+
+    #original is infeasible so create a dual LP
+    if checkFeasibility(mat) == "infeasible":
+        objective = None
+        dual = (np.array(mat).T)*-1
+        if checkBounds(dual) == "unbounded":
+            return "infeasible", None
         
-        # if optimal == True:
-        #     # print(iteration)
-        #     # printTable(obj,con)
-        #     # print("\n\n")
-        #     return "optimal"
-        # elif allPositive == True:
-        #     return "unbounded"
+        #if we're primal and dual infeasible create a modified original LP
+        if checkFeasibility(dual) == "infeasible":          
+            objective = mat[0]
+            mat[0] = [0 for i in range(len(mat[0]))]
+            dual = (np.array(mat).T)*-1
 
-        entering,leaving = largestCoefficient(obj,con)
-        if entering == None:
-            break
+        basisDual = [-i for i in range(len(dual))]          #represents what value is in each constraint row (negative means slack)
         
-        print("------------------------------------")
-        print("entering is " + str(entering))
-        print("leaving is " + str(leaving))
-        performPivot(entering, leaving, obj, con, finalXVals)
-        printTable(obj,con)
-        print("\n\n")
-        iteration +=1
-    return "optimal"
+        nonBasicDual = [i for i in range(len(dual[0]))]     #represents where each xValue (value) is in the basis (index)   
 
+        while True:
 
-printTable(objective,constraints)
-# print("doing checks")
-# for j in range(1, len(objective)):
-#     if objective[j] > 0:
-#         for i in range(len(constraints)):
-#             print("checking " + str(i) + "," + str(j) + ": " + str(constraints[i][j]))
+            if checkBounds(dual) == "unbounded":
+                return "infeasible",None
+            
+            if checkFeasibility(dual) == "infeasible":
+                return "unbounded",None
+            
+            
+            entering,leaving = findPivots(dual, basisDual, nonBasicDual)
+            if entering == None:
+                break
+            
+            if leaving == None:
+                return "infeasible", None
 
-print("\n\n\n")
-output = pivot(objective,constraints, finalXVals)
+            #perform pivot on the dual with the refersed pivot on the primal
+            performPivot(entering, leaving, dual, basisDual, nonBasicDual)
+            #print("---------------primal---------------")
+            performPivot(leaving, entering, mat, basis, nonBasic)
+            
+        
+        #Here we reconstruct the objective values by taking the original objective and reinserting x values
+        if objective != None:
+            mat[0][:] = objective[:]
 
-if output == "unbounded":
+            #positive value in baisis means x value so we set said x value in the objective row to 0
+            for i in range(len(basis)):
+                if basis[i] > 0:
+                    mat[0][basis[i]] = 0
+
+            for i in range(len(basis)):
+               if basis[i] > 0:
+                    for j in range(len(mat[0])):
+                        temp = mat[i][j]*objective[basis[i]] + (mat[0][j])
+                        
+                        mat[0][j] = mat[i][j]*objective[basis[i]] + (mat[0][j])
+                        # if abs(mat[0][j]) < epsilon:
+                        #     mat[0][j] = 0
+            return "feasible found",nonBasic
+        return "optimal",None
+    else:
+        while True:
+            if checkBounds(mat) == "unbounded":
+                return "unbounded",None
+
+            entering,leaving = findPivots(mat, basis, nonBasic)
+            if entering == None:
+                break
+            
+            performPivot(entering, leaving, mat, basis, nonBasic)
+
+        return "optimal",None
+
+def computeFinalVals(mat, basis):
+    xVals = [0 for i in range(len(mat[0]))]
+    for i in range(len(basis)):
+        if basis[i] > 0:
+            xVals[basis[i]] = mat[i][0]
+
+    return xVals
+
+output,nonBasics = pivot(matrix, finalBasis)
+
+if output == "feasible found":
+    output,nonBasics = pivot(matrix, finalBasis,nonBasics)
+    
+
+if output == "unbounded" or output == "infeasible":
     print(output)
 else:
-    #print(finalXVals)
+    
+    finalXVals = computeFinalVals(matrix,finalBasis)
     print(output)
-    print("Max value is " + str(objective[0]) + " with x values of")
+    print(round(matrix[0][0],7))
     for i in range(1, len(finalXVals)):
-        print("x" + str(i) + " with a value of " + (str(constraints[finalXVals[i]][0]) if finalXVals[i] != None else "0") )
-
+        #print("x" + str(i) + " with a value of " + (str( round(finalXVals[i],7) + 0.0 )))
+        print(round(finalXVals[i],7), end = " ")
