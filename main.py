@@ -1,10 +1,5 @@
 import sys
 import numpy as np
-import copy
-
-#inFile = sys.argv[1]
-
-#fo = open(inFile)
 
 objective = []
 matrix = []
@@ -43,8 +38,6 @@ if matrix[-1] == []:
     matrix.pop()
 
 finalBasis = [-i for i in range(len(matrix))]  #represents which variable is in which constraint row(negative means slack variable)
-#print(len(matrix))
-#print(finalBasis)
 
 def printTable(mat):
     count = 0
@@ -121,9 +114,7 @@ def largestCoefficient(mat):
     minRatio,leaving = None,None
 
     for elem in range(1,len(mat)):
-        #print("checking if mat[" + str(elem) + "][" + str(entering) + "] which is " + str(mat[elem][entering]) + " is greater than 0 + " + str(epsilon))
         if mat[elem][entering] == 0 or mat[elem][entering] > -epsilon:
-            #print("it was")
             continue
         if minRatio == None or -mat[elem][0]/mat[elem][entering] < minRatio:
             minRatio,leaving = -mat[elem][0]/mat[elem][entering],elem
@@ -138,8 +129,6 @@ def performPivot(entering, leaving, mat, basis, nonBasic):
     for elem in range(len(mat[leaving])):
         mat[leaving][elem] /= -divisor
 
-        # if abs(mat[leaving][elem]) < epsilon:
-        #     mat[leaving][elem] = 0
 
     for i in range(len(mat)):
         if i == leaving:
@@ -219,7 +208,6 @@ def pivot(mat, basis, nonBasic = None):
 
             #perform pivot on the dual with the refersed pivot on the primal
             performPivot(entering, leaving, dual, basisDual, nonBasicDual)
-            #print("---------------primal---------------")
             performPivot(leaving, entering, mat, basis, nonBasic)
             
         
@@ -235,11 +223,7 @@ def pivot(mat, basis, nonBasic = None):
             for i in range(len(basis)):
                if basis[i] > 0:
                     for j in range(len(mat[0])):
-                        temp = mat[i][j]*objective[basis[i]] + (mat[0][j])
-                        
                         mat[0][j] = mat[i][j]*objective[basis[i]] + (mat[0][j])
-                        # if abs(mat[0][j]) < epsilon:
-                        #     mat[0][j] = 0
             return "feasible found",nonBasic
         return "optimal",None
     else:
@@ -277,5 +261,4 @@ else:
     print(output)
     print(round(matrix[0][0],7))
     for i in range(1, len(finalXVals)):
-        #print("x" + str(i) + " with a value of " + (str( round(finalXVals[i],7) + 0.0 )))
         print(round(finalXVals[i],7), end = " ")
