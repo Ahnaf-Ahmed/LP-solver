@@ -12,7 +12,7 @@ matrix = []
 dual = None
 
 count = 0
-epsilon = 0.0000001
+epsilon = 0.00000001
 degenerate = False
 
 for input in sys.stdin:
@@ -131,9 +131,6 @@ def largestCoefficient(mat):
 
 def performPivot(entering, leaving, mat, basis, nonBasic):
     oldObjVal = mat[0][0]
-    #print("------------------------------------")
-    #print("entering is " + str(entering))
-    #print("leaving is " + str(leaving))
 
      
     divisor = mat[leaving][entering]
@@ -141,42 +138,21 @@ def performPivot(entering, leaving, mat, basis, nonBasic):
     for elem in range(len(mat[leaving])):
         mat[leaving][elem] /= -divisor
 
-        if abs(mat[leaving][elem]) < epsilon:
-            mat[leaving][elem] = 0
-        
-
-    #print("leaving equation is")
-    #print(mat[leaving])
-    #print("with divisor " + str(divisor))
-    #print("\n")
+        # if abs(mat[leaving][elem]) < epsilon:
+        #     mat[leaving][elem] = 0
 
     for i in range(len(mat)):
         if i == leaving:
             continue
         multiFactor = mat[i][entering]
-        #print("multiFactor for " + str(i) + " is " + str(multiFactor))
         for j in range(len(mat[i])):
-            temp = mat[leaving][j]*multiFactor + (mat[i][j] if j != entering else 0)
-            #print("element " + str(j) + " which is originally " + str(mat[i][j]) + " is from " + str(temp) + " = " + str(mat[leaving][j]) + "*" + str(multiFactor) + " + " + str(mat[i][j] if j != entering else 0) )
             mat[i][j] = mat[leaving][j]*multiFactor + (mat[i][j] if j != entering else 0)
             if abs(mat[i][j]) < epsilon:
                 mat[i][j] = 0
 
-    
-    #print("basis BEFORE is    " + str(basis))
-    #print("nonBasic BEFORE is " + str(nonBasic))
-    #print()
-
     hold = nonBasic[entering]
     nonBasic[entering] = basis[leaving]
     basis[leaving] = hold
-
-
-    # print()
-    # print("basis is    " + str(basis))
-    # print("nonBasic is " + str(nonBasic))    
-    # print()
-    # printTable(mat)
 
     newObjVal = mat[0][0]
 
@@ -187,8 +163,6 @@ def performPivot(entering, leaving, mat, basis, nonBasic):
     return
 
 def checkBounds(mat):
-    #print("checking bounds for the following table")
-    #printTable(mat)
     allPositive = True
     for j in range(1, len(mat[0])):
         allPositive = True
@@ -196,12 +170,9 @@ def checkBounds(mat):
             continue
         else:
             for i in range(len(mat)):
-                #print("checking " + str(i) + "," + str(j) + ": " + str(mat[i][j]) + " which is " + str(mat[i][j] < 0)  + " meaning allPositive is " + str(mat[i][j] >= 0))
                 if mat[i][j] < 0 - epsilon:
-                    #print("made it on " + str(i) + "," + str(j))
                     allPositive = False
         if allPositive == True:
-            #print("failed with column " + str(j))
             return "unbounded"
 
 def checkFeasibility(mat):
@@ -216,30 +187,15 @@ def pivot(mat, basis, nonBasic = None):
     #original is infeasible so create a dual LP
     if checkFeasibility(mat) == "infeasible":
         objective = None
-        #print("bad, original is infeasible")
         dual = (np.array(mat).T)*-1
         if checkBounds(dual) == "unbounded":
-            #print("dual is unbounded")
-            #printTable(dual)
             return "infeasible", None
-        
-        #print("\ndual table")
-        #printTable(dual)
         
         #if we're primal and dual infeasible create a modified original LP
         if checkFeasibility(dual) == "infeasible":          
-            #print("dual also infeasible, creating modified LPs")
             objective = mat[0]
             mat[0] = [0 for i in range(len(mat[0]))]
             dual = (np.array(mat).T)*-1
-
-
-        
-        # if objective != None:
-        #     print("\nmodified LP")
-        #     printTable(mat)
-        #     print("\nmodified Dual LP")
-        #     printTable(dual)
 
         basisDual = [-i for i in range(len(dual))]          #represents what value is in each constraint row (negative means slack)
         
@@ -248,11 +204,9 @@ def pivot(mat, basis, nonBasic = None):
         while True:
 
             if checkBounds(dual) == "unbounded":
-                #print("dual's unbounded")
                 return "infeasible",None
             
             if checkFeasibility(dual) == "infeasible":
-                #print("dual's infeasible")
                 return "unbounded",None
             
             
@@ -268,19 +222,9 @@ def pivot(mat, basis, nonBasic = None):
             #print("---------------primal---------------")
             performPivot(leaving, entering, mat, basis, nonBasic)
             
-            
-
-            #printTable(dual)
-            #print("\n\n")
-        
-        #print("-------------Loop End-------------")
         
         #Here we reconstruct the objective values by taking the original objective and reinserting x values
         if objective != None:
-            # print("objective is " + str(objective))
-            # print("basis is " + str(basis))
-            
-
             mat[0][:] = objective[:]
 
             #positive value in baisis means x value so we set said x value in the objective row to 0
@@ -290,45 +234,25 @@ def pivot(mat, basis, nonBasic = None):
 
             for i in range(len(basis)):
                if basis[i] > 0:
-                    # print()
-                    # print("checking basis[" + str(i) + "] which is " + str(basis[i]))
                     for j in range(len(mat[0])):
                         temp = mat[i][j]*objective[basis[i]] + (mat[0][j])
-                        #print("mat[" + str(0) + "][" + str(j) + "] is " + str(temp) + " = " + str(mat[i][j]) + "*" + str(objective[basis[i]]) + " + " + str(mat[0][j]) )
                         
                         mat[0][j] = mat[i][j]*objective[basis[i]] + (mat[0][j])
-                        if abs(mat[0][j]) < epsilon:
-                            mat[0][j] = 0
-            #printTable(mat)
+                        # if abs(mat[0][j]) < epsilon:
+                        #     mat[0][j] = 0
             return "feasible found",nonBasic
-
-        # print("\n\nLoop End")
-        # print("basisDual is " + str(basisDual))
-        # printTable(dual)
-        # print("\n")
-        # print("basis is " + str(basis))
-        # printTable(mat)
-        # print("\n\n")
         return "optimal",None
     else:
-        #print("in here")
         while True:
-
             if checkBounds(mat) == "unbounded":
-                #print()
                 return "unbounded",None
 
             entering,leaving = findPivots(mat, basis, nonBasic)
             if entering == None:
-                # print("simplex done, resulting table:")
-                # printTable(mat)
                 break
             
-
             performPivot(entering, leaving, mat, basis, nonBasic)
 
-            #printTable(mat)
-            #print("\n\n")
         return "optimal",None
 
 def computeFinalVals(mat, basis):
@@ -339,32 +263,19 @@ def computeFinalVals(mat, basis):
 
     return xVals
 
-#printTable(matrix)
-
-#print("\n\n\n")
 output,nonBasics = pivot(matrix, finalBasis)
 
 if output == "feasible found":
-    #print("\n\n\n-----------------Found feasible-----------------")
     output,nonBasics = pivot(matrix, finalBasis,nonBasics)
     
 
 if output == "unbounded" or output == "infeasible":
     print(output)
-    #printTable(matrix)
-    #print("above was " + str(output))
 else:
     
-    #print("final basis is " + str(finalBasis))
     finalXVals = computeFinalVals(matrix,finalBasis)
     print(output)
-    print("Max value is " + str(round(matrix[0][0],7)) + " with x values of")
+    print(round(matrix[0][0],7))
     for i in range(1, len(finalXVals)):
-        print("x" + str(i) + " with a value of " + (str( round(finalXVals[i],7) )))
-        #print("x" + str(i) + " with a value of " + str(finalXVals[i])  ) 
-
-# print("\n\n")
-# printTable(matrix)
-# print("\n\n")
-# dual = np.array(matrix).T
-# printTable(dual)
+        #print("x" + str(i) + " with a value of " + (str( round(finalXVals[i],7) + 0.0 )))
+        print(round(finalXVals[i],7), end = " ")
